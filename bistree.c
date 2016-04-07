@@ -92,7 +92,150 @@ static void rotate_right(BiTreeNode **node)
 
 static void destroy_left(BisTree *tree, BiTreeNode *node)
 {
+    BiTreeNode **position;
 
+    if (bitree_size(tree) == 0) {
+        return;
+    }
+
+    if (node == NULL) {
+        position = &tree->root;
+    }else {
+        position = &tree->left;
+    }
+
+    // 删除节点
+    if (*position != NULL) {
+        destroy_left(tree, *position);
+        destroy_right(tree, *position);
+
+        if (tree->destroy != NULL) {
+            // 调用用户自定的销毁函数去释放动态申请的数据
+            tree->destroy(((AvlNode *)(*position)->data)->data);
+        }
+
+        // 先释放AVL里面的数据，然后释放节点自身
+        free((*position)->data);
+        free(*position);
+        *position = NULL;
+
+        tree->size--;
+    }
+
+    return;
+}
+
+static void destroy_right(BisTree *tree, BiTreeNode *node)
+{
+    BiTreeNode **position;
+
+    if (bitree_size(tree) == 0) {
+        return;
+    }
+
+    if (node == NULL) {
+        position = &tree->root;
+    }else {
+        position = &tree->right;
+    }
+
+    // 删除节点
+    if (*position != NULL) {
+        destroy_left(tree, *position);
+        destroy_right(tree, *position);
+
+        if (tree->destroy != NULL) {
+            // 调用用户自定的销毁函数去释放动态申请的数据
+            tree->destroy(((AvlNode *)(*position)->data)->data);
+        }
+
+        // 先释放AVL里面的数据，然后释放节点自身
+        free((*position)->data);
+        free(*position);
+        *position = NULL;
+
+        tree->size--;
+    }
+
+    return;
+}
+
+static int insert(BisTree *tree, BiTreeNode **node, const void *data, int *balanced)
+{
+    AvlNode *avl_data;
+    int cmpval, retval;
+
+    // 把数据插入到树中
+    if (bitree_is_eob(*node)) {
+        // 控制将其插入到空树中
+        if ((avl_data = (AvlNode *)malloc(sizeof(AvlNode))) == NULL) {
+            return -1;
+        }
+
+        avl_data->factor = AVL_BALANCED;
+        avl_data->hidden = 0;
+        avl_data->data = (void *)data;
+
+        return bitree_ins_left(tree, *node, avl_data);
+    }else {
+
+        cmpval = tree->compare(data, ((AvlNode *)bitree_data(*node))->data);
+        if (cmpval < 0) {
+            if (bitree_is_eob(bitree_left(*node))) {
+                if ((avl_data = (AvlNode *)malloc(sizeof(AvlNode))) == NULL) {
+                    return -1;
+                }
+
+                avl_data->factor = AVL_BALANCED;
+                avl_data->hidden = 0;
+                avl_data->data = (void *)data;
+
+                if (bitree_ins_left(tree, *node, avl_data) != 0) {
+                    return -1;
+                }
+
+                *balanced = 0;
+            }else {
+                if ((retval = insert(tree, &bitree_left(*node), data, balanced)) != 0) {
+                    return retval;
+                }
+            }
+
+            if (! (*balanced)) {
+                switch (((AvlNode *)bitree_data(*node))->factor) {
+                    case AVL_LFT_HEAVY:
+                        rotate_left(node);
+                        *balanced = 1;
+                        break;
+                    case AVL_BALANCED:
+                        ((AvlNode *)bitree_data(*node))->factor = AVL_LFT_HEAVY;
+                        break;
+                    case AVL_RGT_HEAVY:
+                        ((AvlNode *)bitree_data(*node))->factor = AVL_BALANCED;
+                        *balanced = 1;
+                        break;
+                }
+            }
+        }else if (cmpval > 0) { /* if (cmpval < 0)*/
+            if (bitree_is_eob(bitree_right(*node))) {
+                if ((avl_data = (AvlNode *)malloc(sizeof(AvlNode))) == NULL) {
+                    return -1;
+                }
+
+                avl_data->factor = AVL_BALANCED;
+                avl_data->hidden = 0;
+                avl_data->data = (void *)data;
+
+                if (bitree_ins_right(tree, *node, avl_data) != 0) {
+                    return -1;
+                    *balanced = 0;
+                }else {
+                    // 第182页第5行
+                    if ()
+                }
+            }
+        }
+    }
 }
 
 void bistree_init(BisTree *tree, int (*compare)(const void *key1, const void *key2), void (*destroy)(void *data))
