@@ -230,31 +230,124 @@ static int insert(BisTree *tree, BiTreeNode **node, const void *data, int *balan
                     return -1;
                     *balanced = 0;
                 }else {
-                    // 第182页第5行
-                    if ()
+                    if ((retval = insert(tree, &bitree_right(*node), data, balanced)) != 0) {
+                        return retval;
+                    }
+                }
+
+                // 确保树仍然是平衡的
+                if (!(*balanced)) {
+                    switch (((AvlNode *)bitree_data(*node))->factor) {
+                        case AVL_LFT_HEAVY:
+                            ((AvlNode *)bitree_data(*node))->factor = AVL_BALANCED;
+                            *balanced = 1;
+                            break;
+                        case AVL_BALANCED:
+                            ((AvlNode *)bitree_data(*node))->factor = AVL_RGT_HEAVY;
+                            break;
+                        case AVL_RGT_HEAVY:
+                            rotate_right(node);
+                            *balanced = 1;
+                    }
+                }
+            } // if (cmpval > 0)
+            else {
+                // 操控找到数据的复制品
+                if (! ((AvlNode *)bitree_data(*node))->hidden) {
+                    // 数据在树中，并且不隐藏就不做任何事情
+                    return 1;
+                }else {
+                    // 插入一个数据，并且将其标记为不隐藏
+                    if (tree->destroy != NULL) {
+                        // 从开始替换的地方删掉隐藏元素
+                        tree->destroy(((AvlNode *)bitree_data(*node))->data);
+                    }
+                    ((AvlNode *)bitree_data(*node))->data = (void *)data;
+                    ((AvlNode *)bitree_data(*node))->hidden = 0;
+
+                    // 不能更改平衡性，因为树的结构并没有发生改变
+                    *balanced = 1;
                 }
             }
+        } // 这里多了一个括号，不知道是哪里多的，再查
+        return 0;
+    }
+}
+
+static int hide(BisTree *tree, BiTreeNode *node, const void *data)
+{
+    int cmpval, retval;
+    if (bistree_is_eob(node)) {
+        // 没找到就返回
+        return -1;
+    }
+    cmpval = tree->compare(data, ((AvlNode *)bitree_data(node))->data);
+    if (cmpval < 0) {
+        // 移到左节点
+        retval = hide(tree, bitree_left(node), data)
+    }else if (cmpval > 0) {
+        retval = hide(tree, bitree_right(node), data)
+    }else {
+        // 把这个节点隐藏
+        ((AvlNode *)bitree_data(node))->hidden = 1;
+        retval = 0;
+    }
+    return retval;
+}
+
+static int lookup(BisTree *tree, BiTreeNode *node, void **data)
+{
+    int cmpval, retval;
+    if (bistree_is_eob(node)) {
+        // 没找到就返回
+        return -1;
+    }
+    cmpval = tree->compare(data, ((AvlNode *)bitree_data(node))->data);
+    if (cmpval < 0) {
+        // 移到左节点
+        retval = lookup(tree, bitree_left(node), data)
+    }else if (cmpval > 0) {
+        retval = lookup(tree, bitree_right(node), data)
+    }else {
+        if (! ((AvlNode *)bitree_data(node))->hidden) {
+            *data = ((AvlNode *)bitree_data(node))->data;
+            retval = 0;
+        }else {
+            // 404
+            return -1;
         }
     }
+    return retval;
 }
 
 void bistree_init(BisTree *tree, int (*compare)(const void *key1, const void *key2), void (*destroy)(void *data))
 {
+    bitree_init(tree, destroy);
+    tree->compare = compare;
 
+    return;
 }
 
 void bistree_destroy(BisTree *tree)
 {
+    destroy_left(tree, NULL);
+
+    memset(tree, 0, sizeof(BisTree));
+    return;
 }
 
 int bistree_insert(BisTree *tree, const void *data)
 {
+    int balanced = 0;
+    return insert(tree, &bitree_root(tree), data, &balanced);
 }
 
 int bistree_remove(BisTree *tree, const void *data)
 {
+    return hide(tree, bitree_root(tree), data);
 }
 
 int bistree_lookup(BisTree *tree, void **data)
 {
+    return lookup(tree, bitree_root(tree), data);
 }
