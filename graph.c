@@ -174,9 +174,41 @@ int graph_rem_edge(Graph *graph, void *data1, void **data2)
 
 int graph_adjlist(const Graph *graph, const void *data, AdjList **adjlist)
 {
-    // 224 页
+    ListElmt *element, *prev;
+
+    prev = NULL;
+    for (element = list_head(&graph->adjlists); element != NULL; element = list_next(element)) {
+        if (graph->match(data, ((AdjList *)list_data(element))->vertex)) {
+            break;
+        }
+        prev = element;
+    }
+
+    // 如果vertex没找到就返回
+    if (element == NULL) {
+        return -1;
+    }
+
+    *adjlist = list_data(element);
+    return 0;
 }
 
 int graph_is_adjacent(const Graph *graph, const void *data1, const void *data2)
 {
+    ListElmt *element, *prev;
+
+    prev = NULL;
+    for (element = list_head(&graph->adjlists); element != NULL; element = list_next(element)) {
+        if (graph->match(data1, ((AdjList *)list_data(element))->vertex)) {
+            break;
+        }
+        prev = element;
+    }
+
+    // 如果vertex没找到就返回
+    if (element == NULL) {
+        return 0;
+    }
+
+    return set_is_member(&((AdjList *)list_data(element))->adjacent, data2);
 }
