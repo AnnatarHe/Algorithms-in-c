@@ -9,4 +9,15 @@
  */
 int issort(void *data, int size, int esize, int (*compare)(const void *key1, const void *key2));
 
+/**
+ * @param i, k 定义当前进行排序的两个部分, 其值分别初始化为 0, size - 1
+ * @return 当返回时，data包含已排序的元素
+ */
+int qksort(void *data, int size, int esize, int i, int k, int (*compare)(const void *key1, const void *key2));
+
+/**
+ * 归并排序
+ */
+int mgsort(void *data, int size, int esize, int i, int k, int (*compare)(const void *key1, const void *key2));
+
 #endif
