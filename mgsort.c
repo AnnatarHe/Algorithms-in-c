@@ -42,10 +42,81 @@
  */
 static int merge(void *data, int size, int esize, int i, int k, int (*compare)(const void *key1, const void *key2))
 {
+    char *a = data,
+         *m;
+    int ipos,
+        jpos,
+        mpos;
+
+    ipos = i;
+    jpos = j + 1;
+    mpos = 0;
+
+    if ((m = (char *)malloc(esize * ((k - i) + 1))) == NULL) {
+        return -1;
+    }
+
+    // 继续，无论分割中有没有元素
+    while (ipos <= j || jpos <= k) {
+        if (ipos > j) {
+            // 左分割没有更多的元素去合并
+            while (jpos <= k) {
+                memcpy(&m[mpos * esize], &a[jpos * esize], esize);
+                jpos++;
+                mpos++;
+            }
+            continue;
+        }else if (jpos > k) {
+            // 又分割没有更多的元素就去合并
+            while (ipos <= j) {
+                memcpy(&m[mpos * esize], &a[jpos * esize], esize);
+                ipos++;
+                mpos++;
+            }
+            continue;
+        }
+
+        // 追加下一个有序元素到合并的元素
+        if (compare(&a[ipos * esize], &a[jpos * esize]) < 0) {
+            memcpy(&m[mpos * esize], &a[ipos * esize], esize);
+            ipos++;
+            mpos++;
+        }else {
+            memcpy(&m[mpos * esize], &a[jpos * esize], esize);
+            jpos++;
+            mpos++;
+        }
+    }
+    // 准备返回已合并的数据
+    memcpy(&a[i * esize], m, esize * ((k - i) + 1));
+
+    free(m);
+    return 0;
+    
 
 }
 
 int mgsort(void *data, int size, int esize, int i, int k, int (*compare)(const void *key1, const void *key2))
 {
+    int j;
+    
+    // 当没有分割可以被创建的时候停止递归
+    if (i < k) {
+        // 确定哪里分割元素
+        j = (int)(((i + k - 1)) / 2);
 
+        // 递归地排序两个分割
+        if (mgsort(data, size, esize, i, j, compare) < 0) {
+            return -1;
+        }
+
+        if (mgsort(data, size, esize, j + 1, k, compare) < 0) {
+            return -1;
+        }
+
+        if (mgsort(data, esize, i, j, k, compare) < 0) {
+            return -1;
+        }
+    }
+    return 0;
 }
